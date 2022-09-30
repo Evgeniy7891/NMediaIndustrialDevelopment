@@ -6,6 +6,8 @@ import android.widget.PopupMenu
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import ru.netology.nmedia.BuildConfig
 import ru.netology.nmedia.R
 import ru.netology.nmedia.databinding.CardPostBinding
 import ru.netology.nmedia.dto.Post
@@ -41,6 +43,28 @@ class PostViewHolder(
             author.text = post.author
             published.text = post.published
             content.text = post.content
+            Glide.with(avatar)
+                .load("http://192.168.0.103:9999"+"/avatars/"+post.authorAvatar)
+                .circleCrop()
+                .placeholder(R.drawable.ic_baseline_image_search_24)
+                .error(R.drawable.ic_baseline_error_outline_24)
+                .timeout(10_000)
+                .into(avatar)
+
+            if (post.authorAvatar == "")  {
+                Glide.with(avatar)
+                    .load("https://kartinkin.net/uploads/posts/2021-10/1635164057_1-kartinkin-net-p-ferz-art-krasivo-1.jpg")
+                    .circleCrop()
+                    .placeholder(R.drawable.ic_baseline_image_search_24)
+                    .error(R.drawable.ic_baseline_error_outline_24)
+                    .timeout(10_000)
+                    .into(avatar)
+            }
+            Glide.with(imageAttachment)
+                .load("http://192.168.0.103:9999/images/" + post.attachment?.url)
+                .override(600,500)
+                .timeout(10_000)
+                .into(imageAttachment)
             // в адаптере
             like.isChecked = post.likedByMe
             like.text = "${post.likes}"
