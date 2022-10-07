@@ -39,28 +39,31 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         _data.value = FeedModel(loading = true)
         repository.getAllAsync(object : PostRepository.Callback<List<Post>> {
             override fun onSuccess(posts: List<Post>) {
-                _data.postValue(FeedModel(posts = posts, empty = posts.isEmpty()))
+                _data.value = FeedModel(posts = posts, empty = posts.isEmpty())
             }
 
             override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
+                _data.value = FeedModel(error = true)
             }
         })
         println("THREAD - " + Thread.currentThread().id)
     }
 
     fun save() {
-        edited.value?.let {
-                repository.save(it, object  : PostRepository.PostCallback{
+        Thread {
+            edited.value?.let {
+                repository.save(it, object : PostRepository.PostCallback {
                     override fun onSuccess(posts: Post) {
-                        _postCreated.postValue(Unit)
+                        _postCreated.value = Unit
                     }
+
                     override fun onError(e: Exception) {
                         _data.postValue(_data.value?.copy(posts = old))
                     }
                 })
             }
-        edited.value = empty
+            edited.value = empty
+        }
     }
 
     fun edit(post: Post) {
@@ -78,7 +81,14 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     fun likeById(id: Long) {
         repository.likeById(id, object : PostRepository.PostCallback {
             override fun onError(e: Exception) {
-                _data.postValue(_data.value?.copy(posts = old))
+                _data.postValue(FeedModel(error = true))
+                e.message?.let {
+                    val Info = when (it) {
+                        "500" -> "Internal Server Error"
+                        "404" -> "Not Found "
+                        else -> "Error"
+                    }
+                }
             }
 
             override fun onSuccess(posts: Post) {
@@ -97,7 +107,14 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteLikeById(id: Long) {
         repository.deleteLikeById(id, object : PostRepository.PostCallback {
             override fun onError(e: Exception) {
-                _data.postValue(_data.value?.copy(posts = old))
+                _data.postValue(FeedModel(error = true))
+                e.message?.let {
+                    val Info = when (it) {
+                        "500" -> "Internal Server Error"
+                        "404" -> "Not Found "
+                        else -> "Error"
+                    }
+                }
             }
 
             override fun onSuccess(posts: Post) {
@@ -114,20 +131,25 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeById(id: Long) {
-        // Оптимистичная модель
-        //  val old = _data.value?.posts.orEmpty()
-            repository.removeById(id, object : PostRepository.IdCallback{
-                override fun onError(e: Exception) {
-                    _data.postValue(_data.value?.copy(posts = old))
+        repository.removeById(id, object : PostRepository.Callback<Unit> {
+            override fun onSuccess(posts: Unit) {
+                _data.postValue(
+                    _data.value?.copy(posts = _data.value?.posts.orEmpty()
+                        .filter { it.id != id })
+                )
+            }
+
+            override fun onError(e: Exception) {
+                _data.postValue(FeedModel(error = true))
+                e.message?.let {
+                    val Info = when (it) {
+                        "500" -> "Internal Server Error"
+                        "404" -> "Not Found "
+                        else -> "Error"
+                    }
                 }
-                override fun onSuccess(id: Long) {
-                    _data.postValue(
-                            _data.value?.copy(posts = _data.value?.posts.orEmpty()
-                                .filter { it.id != id }
-                            )
-                        )
-                }
-            })
+            }
+        })
         println("THREAD - " + Thread.currentThread().id)
     }
 }

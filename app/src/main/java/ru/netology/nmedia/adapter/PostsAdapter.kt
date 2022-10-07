@@ -44,7 +44,7 @@ class PostViewHolder(
             published.text = post.published
             content.text = post.content
             Glide.with(avatar)
-                .load("http://192.168.0.103:9999"+"/avatars/"+post.authorAvatar)
+                .load("http://10.0.2.2:9999"+"/avatars/"+post.authorAvatar)
                 .circleCrop()
                 .placeholder(R.drawable.ic_baseline_image_search_24)
                 .error(R.drawable.ic_baseline_error_outline_24)
@@ -61,7 +61,7 @@ class PostViewHolder(
                     .into(avatar)
             }
             Glide.with(imageAttachment)
-                .load("http://192.168.0.103:9999/images/" + post.attachment?.url)
+                .load("http://10.0.2.2:9999/images/" + post.attachment?.url)
                 .override(600,500)
                 .timeout(10_000)
                 .into(imageAttachment)
