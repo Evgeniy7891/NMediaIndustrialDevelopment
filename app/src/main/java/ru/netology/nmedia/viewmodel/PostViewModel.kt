@@ -1,6 +1,7 @@
 package ru.netology.nmedia.viewmodel
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.*
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
@@ -50,7 +51,6 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun save() {
-        Thread {
             edited.value?.let {
                 repository.save(it, object : PostRepository.PostCallback {
                     override fun onSuccess(posts: Post) {
@@ -59,11 +59,19 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
                     override fun onError(e: Exception) {
                         _data.postValue(_data.value?.copy(posts = old))
+                        e.message?.let {
+                            val Info = when (it) {
+                                "500" -> "Internal Server Error"
+                                "404" -> "Not Found "
+                                else -> "Error like"
+                            }
+                            println(Info)
+
+                        }
                     }
                 })
             }
             edited.value = empty
-        }
     }
 
     fun edit(post: Post) {
@@ -78,15 +86,34 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         edited.value = edited.value?.copy(content = text)
     }
 
-    fun likeById(id: Long) {
-        repository.likeById(id, object : PostRepository.PostCallback {
+    fun likeById(id: Long) : String {
+        val code = repository.likeById(id, object : PostRepository.PostCallback {
+            override fun onError(e: Exception) {
+                _data.postValue(FeedModel(error = true))
+            }
+            override fun onSuccess(posts: Post) {
+                _data.postValue(
+                    _data.value?.copy(posts = _data.value?.posts.orEmpty()
+                        .map {
+                            if (it.id == id) posts else it
+                        }
+                    )
+                )
+            }
+        })
+        println("!!!! vm like" + code)
+        return code
+    }
+
+    fun deleteLikeById(id: Long) : String {
+       val code = repository.deleteLikeById(id, object : PostRepository.PostCallback {
             override fun onError(e: Exception) {
                 _data.postValue(FeedModel(error = true))
                 e.message?.let {
                     val Info = when (it) {
                         "500" -> "Internal Server Error"
                         "404" -> "Not Found "
-                        else -> "Error"
+                        else -> "Error like"
                     }
                 }
             }
@@ -101,37 +128,12 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         })
-        println("THREAD - " + Thread.currentThread().id)
+        println("!!!!!! vm delete" + code)
+        return code
     }
 
-    fun deleteLikeById(id: Long) {
-        repository.deleteLikeById(id, object : PostRepository.PostCallback {
-            override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
-                e.message?.let {
-                    val Info = when (it) {
-                        "500" -> "Internal Server Error"
-                        "404" -> "Not Found "
-                        else -> "Error"
-                    }
-                }
-            }
-
-            override fun onSuccess(posts: Post) {
-                _data.postValue(
-                    _data.value?.copy(posts = _data.value?.posts.orEmpty()
-                        .map {
-                            if (it.id == id) posts else it
-                        }
-                    )
-                )
-            }
-        })
-        println("THREAD - " + Thread.currentThread().id)
-    }
-
-    fun removeById(id: Long) {
-        repository.removeById(id, object : PostRepository.Callback<Unit> {
+    fun removeById(id: Long) : String {
+        val code = repository.removeById(id, object : PostRepository.Callback<Unit> {
             override fun onSuccess(posts: Unit) {
                 _data.postValue(
                     _data.value?.copy(posts = _data.value?.posts.orEmpty()
@@ -147,9 +149,10 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                         "404" -> "Not Found "
                         else -> "Error"
                     }
+                    println(Info)
                 }
             }
         })
-        println("THREAD - " + Thread.currentThread().id)
+        return code
     }
 }
