@@ -40,18 +40,15 @@ class FeedFragment : Fragment() {
 
             override fun onLike(post: Post) {
                 if (post.likedByMe == false) {
-                    val likeCode = viewModel.likeById(post.id)
-                    binding.codeError.setText("Internal Server Error ${likeCode}")
+                    viewModel.likeById(post.id)
                 } else {
-                    val likeCode = viewModel.deleteLikeById(post.id)
-                    binding.codeError.setText("Internal Server Error ${likeCode}")
+                    viewModel.deleteLikeById(post.id)
                 }
             }
 
             override fun onRemove(post: Post) {
-                val removeCode = viewModel.removeById(post.id)
-                binding.codeError.setText("Internal Server Error ${removeCode}")
-                }
+                viewModel.removeById(post.id)
+            }
 
 
             override fun onShare(post: Post) {
@@ -72,6 +69,7 @@ class FeedFragment : Fragment() {
             binding.progress.isVisible = state.loading
             binding.errorGroup.isVisible = state.error
             binding.emptyText.isVisible = state.empty
+            binding.codeError.setText(viewModel.errorMessage)
         })
 
         binding.retryButton.setOnClickListener {

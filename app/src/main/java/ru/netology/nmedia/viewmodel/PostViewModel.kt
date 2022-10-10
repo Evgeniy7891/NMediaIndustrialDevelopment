@@ -22,6 +22,7 @@ private val empty = Post(
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
     // упрощённый вариант
+    var errorMessage: String = ""
     private val repository: PostRepository = PostRepositoryImpl()
     private val _data = MutableLiveData(FeedModel())
     val data: LiveData<FeedModel>
@@ -44,34 +45,26 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             override fun onError(e: Exception) {
-                _data.value = FeedModel(error = true)
+                //_data.value = FeedModel(error = true)
+                errorCode(e)
             }
         })
-        println("THREAD - " + Thread.currentThread().id)
     }
 
     fun save() {
-            edited.value?.let {
-                repository.save(it, object : PostRepository.PostCallback {
-                    override fun onSuccess(posts: Post) {
-                        _postCreated.value = Unit
-                    }
+        edited.value?.let {
+            repository.save(it, object : PostRepository.PostCallback {
+                override fun onSuccess(posts: Post) {
+                    _postCreated.value = Unit
+                }
 
-                    override fun onError(e: Exception) {
-                        _data.postValue(_data.value?.copy(posts = old))
-                        e.message?.let {
-                            val Info = when (it) {
-                                "500" -> "Internal Server Error"
-                                "404" -> "Not Found "
-                                else -> "Error like"
-                            }
-                            println(Info)
-
-                        }
-                    }
-                })
-            }
-            edited.value = empty
+                override fun onError(e: Exception) {
+                    _data.postValue(_data.value?.copy(posts = old))
+                    errorCode(e)
+                }
+            })
+        }
+        edited.value = empty
     }
 
     fun edit(post: Post) {
@@ -86,36 +79,11 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         edited.value = edited.value?.copy(content = text)
     }
 
-    fun likeById(id: Long) : String {
-        val code = repository.likeById(id, object : PostRepository.PostCallback {
+    fun likeById(id: Long) {
+        repository.likeById(id, object : PostRepository.PostCallback {
             override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
-            }
-            override fun onSuccess(posts: Post) {
-                _data.postValue(
-                    _data.value?.copy(posts = _data.value?.posts.orEmpty()
-                        .map {
-                            if (it.id == id) posts else it
-                        }
-                    )
-                )
-            }
-        })
-        println("!!!! vm like" + code)
-        return code
-    }
-
-    fun deleteLikeById(id: Long) : String {
-       val code = repository.deleteLikeById(id, object : PostRepository.PostCallback {
-            override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
-                e.message?.let {
-                    val Info = when (it) {
-                        "500" -> "Internal Server Error"
-                        "404" -> "Not Found "
-                        else -> "Error like"
-                    }
-                }
+                // _data.postValue(FeedModel(error = true))
+                errorCode(e)
             }
 
             override fun onSuccess(posts: Post) {
@@ -128,12 +96,29 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         })
-        println("!!!!!! vm delete" + code)
-        return code
     }
 
-    fun removeById(id: Long) : String {
-        val code = repository.removeById(id, object : PostRepository.Callback<Unit> {
+    fun deleteLikeById(id: Long) {
+        repository.deleteLikeById(id, object : PostRepository.PostCallback {
+            override fun onError(e: Exception) {
+                //  _data.postValue(FeedModel(error = true))
+                errorCode(e)
+            }
+
+            override fun onSuccess(posts: Post) {
+                _data.postValue(
+                    _data.value?.copy(posts = _data.value?.posts.orEmpty()
+                        .map {
+                            if (it.id == id) posts else it
+                        }
+                    )
+                )
+            }
+        })
+    }
+
+    fun removeById(id: Long) {
+        repository.removeById(id, object : PostRepository.Callback<Unit> {
             override fun onSuccess(posts: Unit) {
                 _data.postValue(
                     _data.value?.copy(posts = _data.value?.posts.orEmpty()
@@ -142,17 +127,20 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             override fun onError(e: Exception) {
-                _data.postValue(FeedModel(error = true))
-                e.message?.let {
-                    val Info = when (it) {
-                        "500" -> "Internal Server Error"
-                        "404" -> "Not Found "
-                        else -> "Error"
-                    }
-                    println(Info)
-                }
+                // _data.postValue(FeedModel(error = true))
+                errorCode(e)
             }
         })
-        return code
+    }
+
+    fun errorCode(e: Exception){
+        e.message?.let { it ->
+            _data.postValue(FeedModel(error = true))
+            errorMessage = when (it) {
+                "500" -> "Ошибка 500"
+                "400" -> "Ошибка 400"
+                else -> "${e.message} нет связи с сервером"
+            }
+        }
     }
 }
